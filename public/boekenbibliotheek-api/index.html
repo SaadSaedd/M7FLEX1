@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Game Management System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .section {
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 20px;
+        }
+        input, select, button {
+            margin: 5px 0;
+            padding: 8px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #results {
+            margin-top: 20px;
+            background-color: #f9f9f9;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Game Management System</h1>
+        
+        <div class="section">
+            <h2>Games</h2>
+            <form id="gameForm">
+                <input type="text" id="gameName" placeholder="Game Name" required>
+                <input type="date" id="gameReleaseDate" required>
+                <select id="gameCategory" required>
+                    <option value="">Select Category</option>
+                </select>
+                <button type="submit">Add Game</button>
+            </form>
+        </div>
+
+        <div class="section">
+            <h2>Categories</h2>
+            <form id="categoryForm">
+                <input type="text" id="categoryTitle" placeholder="Category Title" required>
+                <button type="submit">Add Category</button>
+            </form>
+        </div>
+
+        <div id="results">
+            <h2>Games List</h2>
+            <table id="gamesList">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Release Date</th>
+                        <th>Category</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Fetch and populate categories
+        async function fetchCategories() {
+            const categorySelect = document.getElementById('gameCategory');
+            try {
+                const response = await fetch('/categories');
+                const categories = await response.json();
+                categories.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category.id;
+                    option.textContent = category.title;
+                    categorySelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error fetching categories:', error);
+            }
+        }
+
+        // Fetch and display games
+        async function fetchGames() {
+            const gamesList = document.querySelector('#gamesList tbody');
+            gamesList.innerHTML = ''; // Clear existing rows
+            try {
+                const response = await fetch('/games');
+                const games = await response.json();
+                games.forEach(game => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${game.id}</td>
+                        <td>${game.name}</td>
+                        <td>${game.release_date}</td>
+                        <td>${game.category_name}</td>
+                        <td>
+                            <button onclick="deleteGame(${game.id})">Delete</button>
+                        </td>
+                    `;
+                    gamesList.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error fetching games:', error);
+            }
+        }
+
+        // Add a new game
+        document.getElementById('gameForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('gameName').value;
+            const release_date = document.getElementById('gameReleaseDate').value;
+            const category_id = document.getElementById('gameCategory').value;
+
+            try {
+                const response = await fetch('/games', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ name, release_date, category_id })
+                });
+                
+                if (response.ok) {
+                    fetchGames(); // Refresh the games list
+                    fetchCategories(); // Refresh categories
+                    // Reset form
+                    document.getElementById('gameName').value = '';
+                    document.getElementById('gameReleaseDate').value = '';
+                    document.getElementById('gameCategory').selectedIndex = 0;
+                }
+            } catch (error) {
+                console.error('Error adding game:', error);
+            }
+        });
+
+        // Add a new category
+        document.getElementById('categoryForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const title = document.getElementById('categoryTitle').value;
+
+            try {
+                const response = await fetch('/categories', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ title })
+                });
+                
+                if (response.ok) {
+                    fetchCategories(); // Refresh categories dropdown
+                    document.getElementById('categoryTitle').value = '';
+                }
+            } catch (error) {
+                console.error('Error adding category:', error);
+            }
+        });
+
+        // Delete a game
+        async function deleteGame(id) {
+            try {
+                const response = await fetch(`/games/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    fetchGames(); // Refresh the games list
+                }
+            } catch (error) {
+                console.error('Error deleting game:', error);
+            }
+        }
+
+        // Initial load
+        fetchCategories();
+        fetchGames();
+    </script>
+</body>
+</html>
